@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=Fox Ranger
+GenericName=Arcade Shoot'em Up
+Comment=Fox Ranger (1992) Enhanced Native Recompilation & Translation
+Exec=foxrt
+Icon=foxranger
+Terminal=false
+Categories=Game;ArcadeGame;
+Keywords=fox;ranger;shmup;retro;dos;recomp;

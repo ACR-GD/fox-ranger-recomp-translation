@@ -1,0 +1,3 @@
+Nuked-OPL3 v1.8, vendored from https://github.com/nukeykt/Nuked-OPL3
+commit 765ec962e473aeb767e4cba74ffdc8f588ffbfe8
+Licence: LGPL-2.1-or-later (see LICENSE). Unmodified.

@@ -1,0 +1,54 @@
+# Build artifacts
+build/
+cmake-build-*/
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dylib
+*.dll
+*.exe
+*.out
+*.app
+
+# Package outputs
+*.zip
+*.tar.gz
+*.dmg
+*-checksums-sha256.txt
+
+# IDE / System files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*~
+
+# Scratch & temporary development files
+scratch/
+__pycache__/
+*.pyc
+
+# Runtime configuration (keep user settings local)
+foxranger.ini
+
+# Proprietary DOS game files & extracted copyrighted binary dumps
+fox-ranger/
+work/*.EXE
+work/*.exe
+work/*.DAT
+work/*.SYS
+work/*.wav
+work/*.ppm
+work/*.png
+work/assets/
+work/preview/
+work/run/
+work/strings_exe.txt
+work/triage_*.txt
+
+# Allow decompilation metadata tables
+!work/functions.csv
+!work/function_modules.csv
+!work/blit_10A7.asm
