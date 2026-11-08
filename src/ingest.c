@@ -11,6 +11,10 @@
 #define PATH_SEP '/'
 #endif
 
+#ifndef S_ISDIR
+#define S_ISDIR(m) (((m) & _S_IFMT) == _S_IFDIR)
+#endif
+
 static int file_exists(const char *path)
 {
     struct stat st;

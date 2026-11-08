@@ -27,7 +27,7 @@ typedef struct Cpu {
     uint8_t  cf, zf, sf, of, pf, af, df, ifl;
 } Cpu;
 
-_Static_assert(sizeof(uint16_t) == 2, "16-bit");
+typedef char fox_assert_u16_size[(sizeof(uint16_t) == 2) ? 1 : -1];
 
 static inline void     push16(Cpu *c, uint16_t v) { c->sp = (uint16_t)(c->sp - 2); wr16(c->ss, c->sp, v); }
 static inline uint16_t pop16(Cpu *c)              { uint16_t v = rd16(c->ss, c->sp); c->sp = (uint16_t)(c->sp + 2); return v; }

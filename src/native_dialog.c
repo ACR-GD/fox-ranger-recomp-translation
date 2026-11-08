@@ -61,6 +61,7 @@ int native_dialog_browse_file(const char *title, char *out_path, size_t max_len)
 
 #elif defined(_WIN32)
 #include <windows.h>
+#include <commdlg.h>
 #include <shlobj.h>
 
 int native_dialog_browse_folder(const char *title, char *out_path, size_t max_len)

@@ -5,6 +5,10 @@
 #include <string.h>
 #include <sys/stat.h>
 
+#ifdef _WIN32
+#define strcasecmp _stricmp
+#endif
+
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
