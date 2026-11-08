@@ -1,0 +1,25 @@
+# Fox Ranger (1992) — Recomp & Translation by Second Save
+
+[game]
+game_dir = fox-ranger
+exe_path = 
+language = 0
+
+[video]
+scale = 3
+aspect_4_3 = 1
+fullscreen = 0
+
+[audio]
+sfx_mode = 0
+music_type = 0
+volume_master = 100
+volume_music = 100
+volume_sfx = 100
+volume_voice = 100
+
+[input]
+autofire = 1
+
+[cheats]
+infinite_shields = 0

@@ -62,28 +62,28 @@ jobs:
         if: runner.os == 'macOS'
         run: |
           cd build
-          cpack -G ZIP
+          cpack -C Release -G ZIP
           shasum -a 256 FoxRanger-*.zip > FoxRanger-checksums-sha256.txt
 
       - name: Package with CPack (Linux)
         if: runner.os == 'Linux'
         run: |
           cd build
-          cpack -G "TGZ;ZIP"
+          cpack -C Release -G "TGZ;ZIP"
           sha256sum FoxRanger-*.tar.gz FoxRanger-*.zip > FoxRanger-checksums-sha256.txt
 
       - name: Package with CPack (Windows)
         if: runner.os == 'Windows'
         shell: pwsh
         run: |
-          # Copy SDL2.dll into install directory if present in build tree
+          # Copy SDL2.dll into build directory so CMake install() packages it
           $sdlDll = Get-ChildItem -Path "${env:SDL2_DIR}" -Filter "SDL2.dll" -Recurse -ErrorAction SilentlyContinue | Select-Object -First 1
           if ($sdlDll) {
             Copy-Item $sdlDll.FullName -Destination "build\Release\SDL2.dll" -ErrorAction SilentlyContinue
             Copy-Item $sdlDll.FullName -Destination "build\SDL2.dll" -ErrorAction SilentlyContinue
           }
           cd build
-          cpack -G ZIP
+          cpack -C Release -G ZIP
           Get-FileHash -Algorithm SHA256 FoxRanger-*.zip | ForEach-Object { "$($_.Hash)  $($_.Path | Split-Path -Leaf)" } | Out-File -Encoding ascii FoxRanger-checksums-sha256.txt
 
       - name: Upload Artifacts

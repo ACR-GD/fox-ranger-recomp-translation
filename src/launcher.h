@@ -18,6 +18,10 @@ typedef enum {
  * Returns LAUNCHER_START_GAME when user launches the mission, or LAUNCHER_QUIT. */
 LauncherResult launcher_run(LauncherConfig *cfg);
 
+/* Headless demo recorder: renders an animated interactive walkthrough of the
+ * 640x480 Mission Control launcher into PPM frames at `frames_dir`. */
+int launcher_record_demo(const char *frames_dir, const char *game_dir);
+
 #ifdef __cplusplus
 }
 #endif

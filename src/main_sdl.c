@@ -89,6 +89,7 @@ int main(int argc, char **argv)
     const char *cli_game = NULL, *cli_exe = NULL;
     int cli_scale = 0;
     int no_launcher = 0;
+    const char *record_launcher_dir = NULL;
     PlatformOpts po = { 0 };
     po.scale = 3;
     po.aspect_4_3 = 1;
@@ -100,6 +101,7 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--args")) tail = NEXT();
         else if (!strcmp(a, "--scale")) { po.scale = atoi(NEXT()); cli_scale = po.scale; }
         else if (!strcmp(a, "--no-launcher")) no_launcher = 1;
+        else if (!strcmp(a, "--record-launcher")) record_launcher_dir = NEXT();
         else if (!strcmp(a, "--headless")) po.headless = 1;
         else if (!strcmp(a, "--seconds")) po.seconds = atof(NEXT());
         else if (!strcmp(a, "--keys")) po.keys = NEXT();
@@ -112,10 +114,14 @@ int main(int argc, char **argv)
         else {
             fprintf(stderr, "usage: %s [--game DIR] [--exe FILE] [--args \" a v\"] [--scale N] [--verbose]\n"
                             "       [--headless] [--seconds S] [--keys \"T:KEY,...\"] [--shots \"T:f.ppm,...\"]\n"
-                            "       [--record-frames DIR] [--record-fps FPS] [--wav f.wav]\n"
+                            "       [--record-frames DIR] [--record-fps FPS] [--record-launcher DIR] [--wav f.wav]\n"
                             "       [--no-launcher]\n", argv[0]);
             return 2;
         }
+    }
+
+    if (record_launcher_dir) {
+        return launcher_record_demo(record_launcher_dir, game);
     }
 
     LauncherConfig cfg;

@@ -356,7 +356,7 @@ LauncherResult launcher_run(LauncherConfig *cfg)
 
         /* Header Title */
         retro_draw_text_2x(fb, CANV_W, CANV_H, 40, 12, "FOX RANGER : MISSION CONTROL", 0xFFFFCC00, 0xFF332200);
-        retro_draw_text(fb, CANV_W, CANV_H, 130, 44, "[ 1992 SOFT ACTION * ENHANCED RECOMP & TRANSLATION ]", 0xFF00EEFF, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 118, 44, "[ 1992 SOFT ACTION * RECOMP & TRANSLATION BY SECOND SAVE ]", 0xFF00EEFF, 0);
 
         /* ------------------- Panel 1: Game Data ------------------- */
         retro_draw_panel(fb, CANV_W, CANV_H, 20, 62, 600, 98, 0xFF0077AA, 0xEE081428);
@@ -495,4 +495,291 @@ LauncherResult launcher_run(LauncherConfig *cfg)
     SDL_DestroyWindow(win);
 
     return result;
+}
+
+static void draw_demo_cursor(uint32_t *fb, int mx, int my, int clicking)
+{
+    static const char *arrow[14] = {
+        "X.............",
+        "XX............",
+        "XOX...........",
+        "XOOX..........",
+        "XOOOX.........",
+        "XOOOOX........",
+        "XOOOOOX.......",
+        "XOOOOOOX......",
+        "XOOOOOOOX.....",
+        "XOOOOOOOOX....",
+        "XOOOOOXXXXX...",
+        "XOOXOOX.......",
+        "XOX.XOOX......",
+        "XX...XX......."
+    };
+    if (clicking) {
+        /* Draw click highlight ring */
+        retro_draw_panel(fb, CANV_W, CANV_H, mx - 8, my - 8, 17, 17, 0xFFFFFF00, 0);
+    }
+    for (int r = 0; r < 14; r++) {
+        for (int c = 0; c < 14; c++) {
+            char ch = arrow[r][c];
+            if (ch == '.') continue;
+            int px = mx + c, py = my + r;
+            if (px >= 0 && px < CANV_W && py >= 0 && py < CANV_H) {
+                fb[py * CANV_W + px] = (ch == 'X') ? 0xFF002244 : (clicking ? 0xFFFFEE44 : 0xFF00FFFF);
+            }
+        }
+    }
+}
+
+int launcher_record_demo(const char *frames_dir, const char *game_dir)
+{
+    uint32_t *fb = calloc(CANV_W * CANV_H, sizeof(uint32_t));
+    if (!fb) return -1;
+
+    srand(1992);
+    Star stars[STAR_COUNT];
+    init_stars(stars);
+
+    LauncherConfig cfg;
+    launcher_config_defaults(&cfg);
+    cfg.game_dir[0] = '\0';
+    cfg.exe_path[0] = '\0';
+    cfg.scale = 3;
+    cfg.aspect_4_3 = 1;
+    cfg.autofire = 1;
+    cfg.infinite_shields = 0;
+    cfg.music_type = 0;
+    cfg.sfx_mode = 0;
+    cfg.volume_master = 90;
+    cfg.volume_music = 80;
+    cfg.volume_sfx = 90;
+    cfg.volume_voice = 90;
+
+    IngestStatus ing;
+    memset(&ing, 0, sizeof(ing));
+    snprintf(ing.status_msg, sizeof(ing.status_msg), "ACTION REQUIRED: Select 1992 Fox Ranger DOS Folder");
+
+    typedef struct { int frame; int mx, my; int click_btn; } Waypoint;
+    static const Waypoint wp[] = {
+        {   0, 320, 260, BTN_NONE },
+        {  36, 410, 144, BTN_BROWSE_FOLDER },     /* Click Browse Folder -> Ingest DOS assets! */
+        {  68, 410, 144, BTN_NONE },              /* Hold to admire [OK] asset badges */
+        {  92, 165, 196, BTN_SYNTH_OPL3 },        /* Hover Nuked-OPL3 */
+        { 112, 215, 220, BTN_SFX_HYBRID },        /* Hover Hybrid SFX */
+        { 132, 162, 243, BTN_VOL_MASTER_UP },     /* Click Master + -> 100% */
+        { 152, 442, 243, BTN_VOL_MUSIC_UP },      /* Click Music + -> 90% */
+        { 164, 442, 243, BTN_VOL_MUSIC_UP },      /* Click Music + -> 100% */
+        { 182, 162, 267, BTN_VOL_SFX_UP },        /* Click SFX + -> 100% */
+        { 200, 442, 267, BTN_VOL_VOICE_UP },      /* Click Voice + -> 100% */
+        { 222, 275, 324, BTN_SCALE_4 },           /* Click 4x Scale */
+        { 242, 485, 324, BTN_ASPECT_4_3 },        /* Hover 4:3 CRT */
+        { 262, 230, 350, BTN_AUTOFIRE_ON },       /* Hover Rapid Autofire */
+        { 282, 380, 376, BTN_SHIELD_INFINITE },   /* Toggle Infinite Shields */
+        { 305, 190, 376, BTN_SHIELD_NORMAL },     /* Back to Normal Shields */
+        { 335, 395, 426, BTN_START },             /* Move to >>> START MISSION <<< & Click! */
+        { 360, 395, 426, BTN_NONE }
+    };
+    int n_wp = sizeof(wp) / sizeof(wp[0]);
+    int total_frames = 360; /* 12.0s at 30 FPS */
+    int pulse = 0;
+
+    for (int f = 0; f < total_frames; f++) {
+        int mx = wp[n_wp - 1].mx, my = wp[n_wp - 1].my;
+        int clicking = 0;
+
+        for (int k = 0; k < n_wp - 1; k++) {
+            if (f >= wp[k].frame && f <= wp[k + 1].frame) {
+                int span = wp[k + 1].frame - wp[k].frame;
+                double t = span > 0 ? (double)(f - wp[k].frame) / (double)span : 1.0;
+                /* Smoothstep interpolation */
+                double s = t * t * (3.0 - 2.0 * t);
+                mx = (int)(wp[k].mx + (wp[k + 1].mx - wp[k].mx) * s);
+                my = (int)(wp[k].my + (wp[k + 1].my - wp[k].my) * s);
+                if (f == wp[k + 1].frame && wp[k + 1].click_btn != BTN_NONE) {
+                    int b = wp[k + 1].click_btn;
+                    if (b == BTN_BROWSE_FOLDER) {
+                        snprintf(cfg.game_dir, sizeof(cfg.game_dir), "%s", game_dir ? game_dir : "fox-ranger");
+                        ingest_scan(cfg.game_dir, &ing);
+                    } else if (b == BTN_VOL_MASTER_UP && cfg.volume_master <= 90) cfg.volume_master += 10;
+                    else if (b == BTN_VOL_MUSIC_UP && cfg.volume_music <= 90) cfg.volume_music += 10;
+                    else if (b == BTN_VOL_SFX_UP && cfg.volume_sfx <= 90) cfg.volume_sfx += 10;
+                    else if (b == BTN_VOL_VOICE_UP && cfg.volume_voice <= 90) cfg.volume_voice += 10;
+                    else if (b == BTN_SCALE_4) cfg.scale = 4;
+                    else if (b == BTN_SHIELD_INFINITE) cfg.infinite_shields = 1;
+                    else if (b == BTN_SHIELD_NORMAL) cfg.infinite_shields = 0;
+                }
+                if (wp[k + 1].click_btn != BTN_NONE && f >= wp[k + 1].frame && f <= wp[k + 1].frame + 5) {
+                    clicking = 1;
+                }
+                break;
+            }
+        }
+
+        char master_str[16], music_str[16], sfx_str[16], voice_str[16];
+        snprintf(master_str, sizeof(master_str), "%3d%%", cfg.volume_master);
+        snprintf(music_str,  sizeof(music_str),  "%3d%%", cfg.volume_music);
+        snprintf(sfx_str,    sizeof(sfx_str),    "%3d%%", cfg.volume_sfx);
+        snprintf(voice_str,  sizeof(voice_str),  "%3d%%", cfg.volume_voice);
+
+        const char *arr_label  = ing.has_enhanced_music ? "ARRANGED BGM" : "ARRANGED [--]";
+        const char *mt32_label = ing.has_mt32_dat ? "ROLAND MT-32" : "MT-32 [--]";
+        const char *sc55_label = ing.has_sc55_dat ? "ROLAND SC-55" : "SC-55 [--]";
+
+        ButtonDef buttons[] = {
+            { 345, 134, 130, 20, "BROWSE FOLDER", BTN_BROWSE_FOLDER },
+            { 485, 134, 125, 20, "SELECT FILE...", BTN_BROWSE_FILE },
+            { 120, 186, 95,  20, "NUKED-OPL3",   BTN_SYNTH_OPL3 },
+            { 220, 186, 125, 20, arr_label,      BTN_SYNTH_ARRANGED },
+            { 350, 186, 115, 20, mt32_label,     BTN_SYNTH_MT32 },
+            { 470, 186, 115, 20, sc55_label,     BTN_SYNTH_SC55 },
+            { 120, 210, 190, 20, "HYBRID (OPL3 + SPK)", BTN_SFX_HYBRID },
+            { 318, 210, 120, 20, "PC-SPEAKER",         BTN_SFX_PCSPK },
+            { 445, 210, 100, 20, "ADLIB FM",           BTN_SFX_ADLIB },
+            {  90, 234, 24, 18, "-", BTN_VOL_MASTER_DOWN },
+            { 150, 234, 24, 18, "+", BTN_VOL_MASTER_UP },
+            { 370, 234, 24, 18, "-", BTN_VOL_MUSIC_DOWN },
+            { 430, 234, 24, 18, "+", BTN_VOL_MUSIC_UP },
+            {  90, 258, 24, 18, "-", BTN_VOL_SFX_DOWN },
+            { 150, 258, 24, 18, "+", BTN_VOL_SFX_UP },
+            { 370, 258, 24, 18, "-", BTN_VOL_VOICE_DOWN },
+            { 430, 258, 24, 18, "+", BTN_VOL_VOICE_UP },
+            { 120, 314, 40, 20, "1x",   BTN_SCALE_1 },
+            { 165, 314, 40, 20, "2x",   BTN_SCALE_2 },
+            { 210, 314, 40, 20, "3x",   BTN_SCALE_3 },
+            { 255, 314, 40, 20, "4x",   BTN_SCALE_4 },
+            { 300, 314, 65, 20, "FULL", BTN_SCALE_FULL },
+            { 440, 314, 90, 20, "4:3 CRT",   BTN_ASPECT_4_3 },
+            { 535, 314, 75, 20, "16:10",     BTN_ASPECT_16_10 },
+            { 120, 340, 225, 20, "RAPID AUTOFIRE (HOLD D/CTRL)", BTN_AUTOFIRE_ON },
+            { 355, 340, 130, 20, "ORIGINAL FIRE",                BTN_AUTOFIRE_OFF },
+            { 120, 366, 145, 20, "NORMAL SHIELDS",           BTN_SHIELD_NORMAL },
+            { 275, 366, 215, 20, "INFINITE SHIELDS (CHEAT)", BTN_SHIELD_INFINITE },
+            { 20, 408, 140, 36, "QUIT (ESC)", BTN_QUIT },
+            { 175, 408, 445, 36, ing.is_ready ? ">>> START MISSION (ENTER) <<<" : "[ DOS ASSETS REQUIRED ]", BTN_START }
+        };
+        int num_buttons = sizeof(buttons) / sizeof(buttons[0]);
+        int hovered_btn = BTN_NONE;
+        for (int i = 0; i < num_buttons; i++) {
+            if (is_inside(mx, my, buttons[i].x, buttons[i].y, buttons[i].w, buttons[i].h)) {
+                hovered_btn = buttons[i].id;
+                break;
+            }
+        }
+
+        retro_fill_rect(fb, CANV_W, CANV_H, 0, 0, CANV_W, CANV_H, 0xFF060B18);
+        update_stars(stars);
+        draw_stars(fb, stars);
+        retro_draw_panel(fb, CANV_W, CANV_H, 8, 6, CANV_W - 16, CANV_H - 12, 0xFF0088CC, 0x00000000);
+        retro_draw_text_2x(fb, CANV_W, CANV_H, 40, 12, "FOX RANGER : MISSION CONTROL", 0xFFFFCC00, 0xFF332200);
+        retro_draw_text(fb, CANV_W, CANV_H, 118, 44, "[ 1992 SOFT ACTION * RECOMP & TRANSLATION BY SECOND SAVE ]", 0xFF00EEFF, 0);
+
+        retro_draw_panel(fb, CANV_W, CANV_H, 20, 62, 600, 98, 0xFF0077AA, 0xEE081428);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 66, "1992 DOS GAME ASSETS CONFIGURATION", 0xFF00FFFF, 0);
+        char path_disp[80];
+        snprintf(path_disp, sizeof(path_disp), "Folder: %s", cfg.game_dir[0] ? cfg.game_dir : "[ NOT CONFIGURED - ACTION REQUIRED ]");
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 82, path_disp, cfg.game_dir[0] ? 0xFFFFFFFF : 0xFFFFAA33, 0);
+
+        int badge_y1 = 98;
+        retro_draw_text(fb, CANV_W, CANV_H, 30,  badge_y1, "FOX.DAT:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 95,  badge_y1, ing.has_fox_dat ? "[OK]" : "[--]", ing.has_fox_dat ? 0xFF00FF66 : 0xFFFF4444, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 135, badge_y1, "ADLIB:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 185, badge_y1, ing.has_adlib_dat ? "[OK]" : "[--]", ing.has_adlib_dat ? 0xFF00FF66 : 0xFFFF4444, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 225, badge_y1, "VOICE:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 275, badge_y1, ing.has_voice_dat ? "[OK]" : "[--]", ing.has_voice_dat ? 0xFF00FF66 : 0xFFFF4444, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 315, badge_y1, "STAGE:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 365, badge_y1, ing.has_stage_dat ? "[OK]" : "[--]", ing.has_stage_dat ? 0xFF00FF66 : 0xFFFF4444, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 405, badge_y1, "SPRITE:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 465, badge_y1, ing.has_vsprite_pat ? "[OK]" : "[--]", ing.has_vsprite_pat ? 0xFF00FF66 : 0xFFFF4444, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 505, badge_y1, "EXE:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 545, badge_y1, ing.has_executable ? "[OK]" : "[--]", ing.has_executable ? 0xFF00FF66 : 0xFFFF4444, 0);
+
+        int badge_y2 = 116;
+        retro_draw_text(fb, CANV_W, CANV_H, 30,  badge_y2, "MT-32:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 80,  badge_y2, ing.has_mt32_dat ? "[OK]" : "[--]", ing.has_mt32_dat ? 0xFF00FF66 : 0xFF667788, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 135, badge_y2, "SC-55:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 185, badge_y2, ing.has_sc55_dat ? "[OK]" : "[--]", ing.has_sc55_dat ? 0xFF00FF66 : 0xFF667788, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 240, badge_y2, "ARRANGED CD TRACKS:", 0xFF88AACC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 405, badge_y2, ing.has_enhanced_music ? "[AVAILABLE]" : "[NO FILES]", ing.has_enhanced_music ? 0xFF00FF66 : 0xFF667788, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 136, ing.status_msg, ing.is_ready ? 0xFF55FF55 : 0xFFFFCC00, 0);
+
+        retro_draw_panel(fb, CANV_W, CANV_H, 20, 166, 600, 122, 0xFF0077AA, 0xEE081428);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 170, "AUDIO SYNTHESIS & SOUNDTRACK MIXER", 0xFF00FFFF, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 188, "Music Synth:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 212, "SFX Engine:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30,  236, "Master:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 310, 236, "Music:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30,  260, "SFX:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 310, 260, "Voice:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 116, 235, master_str, 0xFFFFFFFF, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 396, 235, music_str,  0xFFFFFFFF, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 116, 259, sfx_str,    0xFFFFFFFF, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 396, 259, voice_str,  0xFFFFFFFF, 0);
+
+        retro_draw_panel(fb, CANV_W, CANV_H, 180, 238, 85, 10, 0xFF006699, 0xFF051020);
+        int w_m = (81 * cfg.volume_master) / 100;
+        if (w_m > 0) retro_fill_rect(fb, CANV_W, CANV_H, 182, 240, w_m, 6, 0xFF00FFCC);
+        retro_draw_panel(fb, CANV_W, CANV_H, 460, 238, 85, 10, 0xFF006699, 0xFF051020);
+        int w_mus = (81 * cfg.volume_music) / 100;
+        if (w_mus > 0) retro_fill_rect(fb, CANV_W, CANV_H, 462, 240, w_mus, 6, 0xFF00FFCC);
+        retro_draw_panel(fb, CANV_W, CANV_H, 180, 262, 85, 10, 0xFF006699, 0xFF051020);
+        int w_s = (81 * cfg.volume_sfx) / 100;
+        if (w_s > 0) retro_fill_rect(fb, CANV_W, CANV_H, 182, 264, w_s, 6, 0xFF00FFCC);
+        retro_draw_panel(fb, CANV_W, CANV_H, 460, 262, 85, 10, 0xFF006699, 0xFF051020);
+        int w_v = (81 * cfg.volume_voice) / 100;
+        if (w_v > 0) retro_fill_rect(fb, CANV_W, CANV_H, 462, 264, w_v, 6, 0xFF00FFCC);
+
+        retro_draw_panel(fb, CANV_W, CANV_H, 20, 294, 600, 102, 0xFF0077AA, 0xEE081428);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 298, "MISSION & SYSTEM PARAMETERS", 0xFF00FFFF, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 316, "Scale:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 380, 316, "Aspect:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 342, "Weapon:", 0xFFCCCCCC, 0);
+        retro_draw_text(fb, CANV_W, CANV_H, 30, 368, "Shields:", 0xFFCCCCCC, 0);
+
+        for (int i = 0; i < num_buttons; i++) {
+            ButtonDef *b = &buttons[i];
+            int is_hov = (hovered_btn == b->id);
+            int is_sel = 0;
+            if (b->id == BTN_SYNTH_OPL3) is_sel = (cfg.music_type == 0);
+            else if (b->id == BTN_SYNTH_ARRANGED) is_sel = (cfg.music_type == 1);
+            else if (b->id == BTN_SYNTH_MT32) is_sel = (cfg.music_type == 2);
+            else if (b->id == BTN_SYNTH_SC55) is_sel = (cfg.music_type == 3);
+            else if (b->id == BTN_SFX_HYBRID) is_sel = (cfg.sfx_mode == 0);
+            else if (b->id == BTN_SFX_PCSPK) is_sel = (cfg.sfx_mode == 1);
+            else if (b->id == BTN_SFX_ADLIB) is_sel = (cfg.sfx_mode == 2);
+            else if (b->id == BTN_SCALE_1) is_sel = (!cfg.fullscreen && cfg.scale == 1);
+            else if (b->id == BTN_SCALE_2) is_sel = (!cfg.fullscreen && cfg.scale == 2);
+            else if (b->id == BTN_SCALE_3) is_sel = (!cfg.fullscreen && cfg.scale == 3);
+            else if (b->id == BTN_SCALE_4) is_sel = (!cfg.fullscreen && cfg.scale == 4);
+            else if (b->id == BTN_SCALE_FULL) is_sel = cfg.fullscreen;
+            else if (b->id == BTN_ASPECT_4_3) is_sel = cfg.aspect_4_3;
+            else if (b->id == BTN_ASPECT_16_10) is_sel = !cfg.aspect_4_3;
+            else if (b->id == BTN_AUTOFIRE_ON) is_sel = cfg.autofire;
+            else if (b->id == BTN_AUTOFIRE_OFF) is_sel = !cfg.autofire;
+            else if (b->id == BTN_SHIELD_NORMAL) is_sel = !cfg.infinite_shields;
+            else if (b->id == BTN_SHIELD_INFINITE) is_sel = cfg.infinite_shields;
+            else if (b->id == BTN_START && ing.is_ready) {
+                pulse = (pulse + 1) % 30;
+                is_sel = (pulse < 15);
+            }
+            retro_draw_button(fb, CANV_W, CANV_H, b->x, b->y, b->w, b->h, b->label, is_hov, is_sel);
+        }
+
+        retro_draw_text(fb, CANV_W, CANV_H, 110, 456, "Use Mouse or Enter/Space to select * B: Browse * Esc: Quit", 0xFF6688AA, 0);
+        draw_demo_cursor(fb, mx, my, clicking);
+
+        char path[512];
+        snprintf(path, sizeof(path), "%s/frame_%06d.ppm", frames_dir, f);
+        FILE *fp = fopen(path, "wb");
+        if (fp) {
+            fprintf(fp, "P6\n%d %d\n255\n", CANV_W, CANV_H);
+            for (int i = 0; i < CANV_W * CANV_H; i++) {
+                uint8_t rgb[3] = { (uint8_t)(fb[i] >> 16), (uint8_t)(fb[i] >> 8), (uint8_t)fb[i] };
+                fwrite(rgb, 1, 3, fp);
+            }
+            fclose(fp);
+        }
+    }
+
+    free(fb);
+    return 0;
 }
