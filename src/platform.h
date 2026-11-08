@@ -26,6 +26,8 @@ typedef struct {
     double      seconds;       /* stop after N seconds of (virtual) time; 0 = run until exit */
     const char *wav;           /* capture mixed audio (headless)               */
     const char *shots;         /* "T:file.ppm,T:file.ppm" (seconds)            */
+    const char *record_frames; /* directory to dump continuous PPM frames       */
+    double      record_fps;    /* FPS for frame recording (default 60)         */
     const char *keys;          /* "T:KEY,T:KEY" key taps; KEY = ENTER SPACE ESC UP DOWN LEFT RIGHT CTRL ALT A-Z 0-9 */
     int         scale;         /* window scale (320x240 logical)               */
     int         fullscreen;    /* 1 = fullscreen desktop                       */

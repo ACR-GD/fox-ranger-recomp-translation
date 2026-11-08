@@ -12,10 +12,12 @@ cmake-build-*/
 *.out
 *.app
 
-# Package outputs
+# Package outputs & media
 *.zip
 *.tar.gz
 *.dmg
+*.mp4
+*.webm
 *-checksums-sha256.txt
 
 # IDE / System files

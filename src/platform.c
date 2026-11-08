@@ -37,6 +37,8 @@ static int           g_tex_h;
 static uint32_t      g_px[320 * 480];
 
 static double g_t_present_ms, g_t_sleep_ms;
+static double g_record_next;
+static uint64_t g_record_idx;
 void platform_present(void)
 {
     if (!g_ren) return;
@@ -176,7 +178,7 @@ static int ev_cmp(const void *a, const void *b)
 
 static void parse_events(void)
 {
-    char buf[4096];
+    static char buf[65536];
     for (int pass = 0; pass < 2; pass++) {
         const char *src = pass ? g_o.shots : g_o.keys;
         if (!src) continue;
@@ -344,6 +346,13 @@ static void poll(Cpu *c, uint32_t at)
     if ((double)now >= g_next_frame) {
         g_next_frame += FRAME_US;
         if ((double)now > g_next_frame) g_next_frame = (double)now + FRAME_US;
+        if (g_o.record_frames && (double)now >= g_record_next) {
+            char path[512];
+            snprintf(path, sizeof path, "%s/frame_%06llu.ppm", g_o.record_frames, (unsigned long long)g_record_idx++);
+            write_ppm(path);
+            if (g_record_next == 0) g_record_next = (double)now;
+            g_record_next += 1000000.0 / (g_o.record_fps > 0 ? g_o.record_fps : 60.0);
+        }
         /* Presentation must never pace the game: the game thread owns the
          * emulated machine. VGA frames (70 Hz) are dropped to stay at or below
          * the display rate, and after a slow present (compositor back-pressure)

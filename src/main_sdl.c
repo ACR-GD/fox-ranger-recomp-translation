@@ -104,12 +104,15 @@ int main(int argc, char **argv)
         else if (!strcmp(a, "--seconds")) po.seconds = atof(NEXT());
         else if (!strcmp(a, "--keys")) po.keys = NEXT();
         else if (!strcmp(a, "--shots")) po.shots = NEXT();
+        else if (!strcmp(a, "--record-frames")) po.record_frames = NEXT();
+        else if (!strcmp(a, "--record-fps")) po.record_fps = atof(NEXT());
         else if (!strcmp(a, "--wav")) po.wav = NEXT();
         else if (!strcmp(a, "--verbose")) po.verbose = 1;
         else if (!strcmp(a, "--trace-calls")) { g_calls = fopen(NEXT(), "w"); rt_call_log = g_calls ? log_call : NULL; }
         else {
             fprintf(stderr, "usage: %s [--game DIR] [--exe FILE] [--args \" a v\"] [--scale N] [--verbose]\n"
-                            "       [--headless] [--seconds S] [--keys \"T:KEY,...\"] [--shots \"T:f.ppm,...\"] [--wav f.wav]\n"
+                            "       [--headless] [--seconds S] [--keys \"T:KEY,...\"] [--shots \"T:f.ppm,...\"]\n"
+                            "       [--record-frames DIR] [--record-fps FPS] [--wav f.wav]\n"
                             "       [--no-launcher]\n", argv[0]);
             return 2;
         }
@@ -118,7 +121,7 @@ int main(int argc, char **argv)
     LauncherConfig cfg;
     launcher_config_load(&cfg);
 
-    int is_scripted = (po.headless || po.keys != NULL || po.shots != NULL);
+    int is_scripted = (po.headless || po.keys != NULL || po.shots != NULL || po.record_frames != NULL);
     if (!is_scripted && !no_launcher) {
         if (cli_game) snprintf(cfg.game_dir, sizeof(cfg.game_dir), "%s", cli_game);
         if (cli_exe) snprintf(cfg.exe_path, sizeof(cfg.exe_path), "%s", cli_exe);

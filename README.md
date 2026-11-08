@@ -2,6 +2,10 @@
 
 A native, portable C static recompilation and full English translation of **Fox Ranger (폭스레인저)**, the legendary 1992 vertical scrolling shoot'em up for MS-DOS developed by Soft Action.
 
+<p align="center">
+  <img src="packaging/fox_ranger_combat_preview.gif" alt="Fox Ranger 1992 Native Recompilation Gameplay" width="640">
+</p>
+
 ---
 
 ## Highlights & Features
@@ -118,6 +122,14 @@ Or trigger the automated GitHub Actions workflow (`.github/workflows/release.yml
 git tag v1.0.0
 git push origin v1.0.0
 ```
+
+---
+
+## Technical Documentation & Architecture Report
+
+For a complete engineering retrospective, reverse-engineering ledger, and architecture deep-dive covering memory mapping, Mode-X planar VGA simulation, sound hardware, and the differential verification methodology:
+
+📖 **Read the Full Technical Report**: [`PROJECT_REPORT.md`](PROJECT_REPORT.md)
 
 ---
 
