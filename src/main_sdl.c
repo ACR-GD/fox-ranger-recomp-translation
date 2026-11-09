@@ -44,6 +44,34 @@
 #include "enhanced_music.h"
 #include <SDL.h>
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#include <unistd.h>
+#include <libgen.h>
+
+static void macos_setup_working_dir(void)
+{
+    char path[1024];
+    uint32_t size = sizeof(path);
+    if (_NSGetExecutablePath(path, &size) == 0) {
+        char real[1024];
+        if (realpath(path, real)) {
+            char *app_pos = strstr(real, ".app/Contents/MacOS");
+            if (app_pos) {
+                *app_pos = '\0';
+                char *parent_dir = dirname(real);
+                if (parent_dir && parent_dir[0]) {
+                    char cwd[1024];
+                    if (getcwd(cwd, sizeof(cwd)) && (strcmp(cwd, "/") == 0 || strncmp(cwd, "/private/var", 12) == 0 || strncmp(cwd, "/var", 4) == 0)) {
+                        chdir(parent_dir);
+                    }
+                }
+            }
+        }
+    }
+}
+#endif
+
 #define LOAD_SEG   0x0800          /* PSP at 07F0h: ~620 KB conventional memory free */
 #define DGROUP_IMG 0x1ADF
 #define MAIN_SEG   0x0000
@@ -85,6 +113,9 @@ static void build_args(Cpu *c, const char *tail, uint16_t *argc_out, FarPtr *arg
 
 int main(int argc, char **argv)
 {
+#ifdef __APPLE__
+    macos_setup_working_dir();
+#endif
     const char *game = "fox-ranger", *exe = "work/FOX_EN_FINAL.EXE", *tail = " a v";
     const char *cli_game = NULL, *cli_exe = NULL;
     int cli_scale = 0;

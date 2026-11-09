@@ -85,6 +85,10 @@ static int find_track_file(int track_id, const char *name, char *out_path, size_
         g_music_dir,
         "enhanced_music",
         "fox-ranger/enhanced_music",
+#ifdef __APPLE__
+        "FoxRanger.app/Contents/Resources/enhanced_music",
+        "../Resources/enhanced_music",
+#endif
         NULL
     };
 

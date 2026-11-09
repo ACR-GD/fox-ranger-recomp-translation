@@ -61,6 +61,7 @@ jobs:
       - name: Package with CPack (macOS)
         if: runner.os == 'macOS'
         run: |
+          ./packaging/bundle_macos.sh build/FoxRanger.app "${SDL2_ROOT:-}"
           cd build
           cpack -C Release -G ZIP
           shasum -a 256 FoxRanger-*.zip > FoxRanger-checksums-sha256.txt

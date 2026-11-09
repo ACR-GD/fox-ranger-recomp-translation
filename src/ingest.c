@@ -108,7 +108,9 @@ int ingest_scan(const char *folder_or_file, IngestStatus *out)
     snprintf(enh_path, sizeof(enh_path), "%s%cenhanced_music", folder, PATH_SEP);
     out->has_enhanced_music = enhanced_music_has_tracks(enh_path) ||
                              enhanced_music_has_tracks("enhanced_music") ||
-                             enhanced_music_has_tracks("fox-ranger/enhanced_music");
+                             enhanced_music_has_tracks("fox-ranger/enhanced_music") ||
+                             enhanced_music_has_tracks("FoxRanger.app/Contents/Resources/enhanced_music") ||
+                             enhanced_music_has_tracks("../Resources/enhanced_music");
 
     /* Check executable */
     char found_exe[512] = "";

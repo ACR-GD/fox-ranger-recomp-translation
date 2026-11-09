@@ -82,13 +82,10 @@ if (APPLE)
   set_source_files_properties(packaging/FoxRanger.icns PROPERTIES MACOSX_PACKAGE_LOCATION "Resources")
   target_sources(foxrt PRIVATE packaging/FoxRanger.icns)
 
-  if (EXISTS "/Library/Frameworks/SDL2.framework")
-    add_custom_command(TARGET foxrt POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory $<TARGET_BUNDLE_DIR:foxrt>/Contents/Frameworks
-      COMMAND ${CMAKE_COMMAND} -E copy_directory /Library/Frameworks/SDL2.framework $<TARGET_BUNDLE_DIR:foxrt>/Contents/Frameworks/SDL2.framework
-      COMMENT "Bundling SDL2.framework into FoxRanger.app"
-    )
-  endif()
+  add_custom_command(TARGET foxrt POST_BUILD
+    COMMAND "${CMAKE_SOURCE_DIR}/packaging/bundle_macos.sh" "$<TARGET_BUNDLE_DIR:foxrt>"
+    COMMENT "Bundling SDL2 dependencies and signing FoxRanger.app"
+  )
 endif()
 
 # shared library for the Python differential tests (ctypes)
