@@ -1,5 +1,6 @@
 #include "mz_load.h"
 #include "mem.h"
+#include "game_image.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -8,13 +9,64 @@ static uint16_t le16(const uint8_t *p) { return (uint16_t)(p[0] | (p[1] << 8)); 
 
 int mz_load(const char *path, uint16_t load_seg, const char *cmdtail, MzInfo *out)
 {
-    FILE *f = fopen(path, "rb");
-    if (!f) { perror(path); return -1; }
-    fseek(f, 0, SEEK_END); long n = ftell(f); fseek(f, 0, SEEK_SET);
-    uint8_t *d = malloc((size_t)n);
-    if (!d || fread(d, 1, (size_t)n, f) != (size_t)n) { fclose(f); free(d); return -1; }
-    fclose(f);
-    if (n < 0x1C || d[0] != 'M' || d[1] != 'Z') { fprintf(stderr, "%s: not an MZ file\n", path); free(d); return -1; }
+    g_load_seg = load_seg;
+    int use_builtin_template = 0;
+    FILE *f = path ? fopen(path, "rb") : NULL;
+    uint8_t *d = NULL;
+    long n = 0;
+
+    if (f) {
+        fseek(f, 0, SEEK_END); n = ftell(f); fseek(f, 0, SEEK_SET);
+        if (n >= 100000) {
+            d = malloc((size_t)n);
+            if (!d || fread(d, 1, (size_t)n, f) != (size_t)n) {
+                use_builtin_template = 1;
+            } else if (d[0] != 'M' || d[1] != 'Z') {
+                use_builtin_template = 1;
+            }
+        } else {
+            /* Packed DOS executable (PKLITE/EXEPACK, e.g. original 48 KB FOX.EXE) */
+            use_builtin_template = 1;
+        }
+        fclose(f);
+    } else {
+        use_builtin_template = 1;
+    }
+
+    if (use_builtin_template) {
+        if (d) free(d);
+
+        /* Load relocated image directly into emulated memory */
+        uint32_t lin = LIN(load_seg, 0);
+        if (lin + sizeof(g_game_image) <= sizeof(ram)) {
+            memcpy(&ram[lin], g_game_image, sizeof(g_game_image));
+        }
+
+        /* PSP */
+        uint16_t psp = (uint16_t)(load_seg - 0x10);
+        uint8_t *P = &ram[LIN(psp, 0)];
+        memset(P, 0, 256);
+        P[0] = 0xCD; P[1] = 0x20;                              /* INT 20h */
+        P[2] = 0x00; P[3] = 0xA0;                              /* top of memory = A000 */
+        size_t tl = cmdtail ? strlen(cmdtail) : 0;
+        if (tl > 126) tl = 126;
+        P[0x80] = (uint8_t)tl;
+        if (tl) memcpy(P + 0x81, cmdtail, tl);
+        P[0x81 + tl] = 0x0D;
+
+        if (out) {
+            out->psp_seg = psp;
+            out->load_seg = load_seg;
+            out->cs = (uint16_t)(0x134D + load_seg);
+            out->ip = 0x001A;
+            out->ss = (uint16_t)(0x1ADF + load_seg);
+            out->sp = 0x2CBE;
+            out->image_size = GAME_IMAGE_SIZE;
+            out->nrelocs = 0;
+            out->end_seg = (uint16_t)(load_seg + 0x30CD);
+        }
+        return 0;
+    }
 
     uint16_t last = le16(d + 2), pages = le16(d + 4), nrel = le16(d + 6), hdrpar = le16(d + 8);
     uint16_t minalloc = le16(d + 0x0A), ss = le16(d + 0x0E), sp = le16(d + 0x10);

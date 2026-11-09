@@ -9,7 +9,9 @@ rebuild a proper, uncompressed MZ executable.
 
 usage: unpack_exe.py PACKED.EXE OUT.EXE
 """
-import struct, sys
+import sys
+sys.path = [p for p in sys.path if not p.endswith('/tools') and not p.endswith('\\tools')]
+import struct
 from unicorn import Uc, UC_ARCH_X86, UC_MODE_16, UC_HOOK_INTR, UC_HOOK_CODE
 from unicorn.x86_const import *
 

@@ -134,6 +134,11 @@ int ingest_scan(const char *folder_or_file, IngestStatus *out)
         out->has_executable = 1;
     } else if (check_asset_ci(folder, "FOX.EXE", found_exe, sizeof(found_exe))) {
         out->has_executable = 1;
+        out->is_translated = 1;
+    } else {
+        /* Built-in recompiled image available */
+        out->has_executable = 1;
+        out->is_translated = 1;
     }
 
     if (found_exe[0]) {
